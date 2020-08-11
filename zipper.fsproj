@@ -10,6 +10,7 @@
     <Compile Include="Zipper.fsi" />
     <Compile Include="Zipper.fs" />
     <Compile Include="ListZipper.fs" />
+    <Compile Include="FileSystem.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
