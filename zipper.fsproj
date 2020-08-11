@@ -3,10 +3,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <OtherFlags>$(OtherFlags) --sig:Zipper.fsi </OtherFlags>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Zipper.fsi" />
     <Compile Include="Zipper.fs" />
+    <Compile Include="ListZipper.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
