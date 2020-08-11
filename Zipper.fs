@@ -1,5 +1,16 @@
 module Zipper
 
+type OptionBuiler () = 
+    member x.Return a = Some a 
+
+    member x.ReturnFrom a = a
+
+    member x.Bind (option, f) = option |> Option.bind f
+
+let option = OptionBuiler ()
+
+let (>>=) m f = m |> Option.bind f
+
 type Tree<'a> = Empty | Node of 'a * Tree<'a> * Tree<'a>
 
 let freeTree = 
@@ -54,19 +65,19 @@ type Zipper<'a> = Tree<'a> * BreadCrumbs<'a>
 
 let goLeft (tree, bs) =
     match tree with 
-    | Node (x, l, r) -> (l, (LeftCrumb (x, r)) :: bs)
-    | Empty -> failwith "Not yet implemented."
+    | Node (x, l, r) -> Some (l, (LeftCrumb (x, r)) :: bs)
+    | Empty -> None
 
 let goRight (tree, bs) =
     match tree with
-    | Node (x, l, r) -> (r, (RightCrumb (x, l)) :: bs)
-    | Empty -> failwith "Not yet implemented."
+    | Node (x, l, r) -> Some (r, (RightCrumb (x, l)) :: bs)
+    | Empty -> None
 
 let goUp (tree, bs) = 
     match tree, bs with 
-    | l, LeftCrumb (x, r) :: rest -> Node (x, l, r), rest
-    | r, RightCrumb (x, l) :: rest -> Node (x, l, r), rest
-    | n, [] -> n, []
+    | l, LeftCrumb (x, r) :: rest -> Some (Node (x, l, r), rest)
+    | r, RightCrumb (x, l) :: rest -> Some (Node (x, l, r), rest)
+    | n, [] -> None
 
 let modify f tree =
     match tree with 
@@ -77,12 +88,18 @@ let attact t (_, bs) = (t, bs)
 
 let rec topMost zipper =
     match zipper with 
-    | t, [] -> t
-    | z -> topMost (goUp z)
+    | t, [] -> Some t
+    | z -> 
+        option {
+            let! a = goUp z
+            return! (topMost a) 
+        }
 
 
 let t = 
-    (freeTree, [])
-    |> goRight
-    |> goLeft
-    |> goUp
+    Some (freeTree, [])
+    >>= goLeft
+    >>= goRight
+    >>= goRight
+    >>= goUp
+    >>= topMost

@@ -15,10 +15,10 @@ type Crumb<'a> =
   | RightCrumb of 'a * Tree<'a>
 type BreadCrumbs<'a> = Crumb<'a> list
 type Zipper<'a> = Tree<'a> * BreadCrumbs<'a>
-val goLeft : tree:Tree<'a> * bs:Crumb<'a> list -> Tree<'a> * Crumb<'a> list
-val goRight : tree:Tree<'a> * bs:Crumb<'a> list -> Tree<'a> * Crumb<'a> list
-val goUp : tree:Tree<'a> * bs:Crumb<'a> list -> Tree<'a> * Crumb<'a> list
+val goLeft : tree:Tree<'a> * bs:Crumb<'a> list -> (Tree<'a> * Crumb<'a> list) option
+val goRight : tree:Tree<'a> * bs:Crumb<'a> list -> (Tree<'a> * Crumb<'a> list) option
+val goUp : tree:Tree<'a> * bs:Crumb<'a> list -> (Tree<'a> * Crumb<'a> list) option
 val modify : f:('a -> 'a) -> tree:Tree<'a> -> Tree<'a>
 val attact : t:'a -> 'b * bs:'c -> 'a * 'c
-val topMost : Tree<'a> * Crumb<'a> list -> Tree<'a>
+val topMost : Tree<'a> * Crumb<'a> list -> Tree<'a> option
 
