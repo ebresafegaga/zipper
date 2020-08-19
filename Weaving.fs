@@ -70,21 +70,105 @@ let right =
     | At { it = t; ctx = If'' (p, c, b) } -> At { it = b; ctx = If'''(p, t, c) }
     | At { ctx = If''' _ } as x -> x
 
-module Web =
+module AWeb =
+
+    open System // for this guy: Lazy<'a>
 
     type Loc<'a> = At of at<'a>
 
     and at<'a> =
         { it: 'a
-          down: Loc<'a>
-          up: Loc<'a>
-          left: Loc<'a>
-          right: Loc<'a> }
+          down: Loc<'a> Lazy
+          up: Loc<'a> Lazy
+          left: Loc<'a> Lazy
+          right: Loc<'a> Lazy }
 
-    let rec weave l = 
-        function 
-        | Var s -> l
-        | Abs (s, l1) -> 
-            //let rec r = At { it=l1; down=weave r l; up=r; left=l;right=l}
-            //r
-            0
+    let rec weave l0 =
+        function
+        | Var s -> l0
+        | Abs (s, t1) ->
+            let rec l1 =
+                lazy At { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l1 }
+            l1
+        | App (t1, t2) -> 
+            let rec l1 = 
+                lazy At { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+            l1
+        | If (t1, t2, t3) -> 
+            let rec l1 = 
+                lazy At { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l3 = 
+                lazy At { it = t3 
+                          down = weave l3 t3 
+                          up = l0 
+                          left = l2 
+                          right = l3 }
+            l1
+
+    let loc0 wv l0 = l0
+    let loc1 wv l0 t1 = 
+        let rec l1 =
+                lazy At { it = t1
+                          down = wv l1 t1
+                          up = l0
+                          left = l1
+                          right = l1 }
+        l1
+    let loc2 wv l0 t1 t2 = 
+        let rec l1 = 
+                lazy At { it = t1
+                          down = wv l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = wv l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+        l1
+    let loc3 wv l0 t1 t2 t3 = 
+        let rec l1 = 
+                lazy At { it = t1
+                          down = wv l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = wv l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l3 = 
+                lazy At { it = t3 
+                          down = wv l3 t3 
+                          up = l0 
+                          left = l2 
+                          right = l3 }
+        l1
