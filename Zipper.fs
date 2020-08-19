@@ -2,11 +2,8 @@ module Zipper
 
 type OptionBuiler () = 
     member x.Return a = Some a 
-
     member x.ReturnFrom a = a
-
     member x.Bind (option, f) = option |> Option.bind f
-
 let option = OptionBuiler ()
 
 let (>>=) m f = m |> Option.bind f
@@ -34,18 +31,17 @@ let freeTree =
 let changeWToP (Node (p, a, (Node (l, (Node (w, c, r)), b)))) =
     (Node (p, a, (Node (l, (Node ('P', c, r)), b))))
 
-
 type Direction = L | R
 type Directions = Direction list 
 
-let rec changeToP ds tree = 
+let rec changeToP (ds:Directions) tree = 
     match ds, tree with 
     | (L::rest), Node (x, l, r) -> Node (x, (changeToP rest l), r)
     | (R::rest), Node (x, l, r) -> Node (x, l, (changeToP rest r))
     | [], Node (x, l, r) -> Node ('P', l, r)
     | _, Empty -> failwith "Not yet implemented"
 
-let rec elemAt ds tree = 
+let rec elemAt (ds:Directions) tree = 
     match ds, tree with 
     | (L::rest), Node (_, l, _) -> elemAt rest l
     | (R::rest), Node (_, _, r) -> elemAt rest r
@@ -56,12 +52,17 @@ let rec elemAt ds tree =
 let newTree = changeToP [R; L] freeTree
 let elem = elemAt [R; L] newTree
 
-
 type Crumb<'a> = LeftCrumb of 'a * Tree<'a> | RightCrumb of 'a * Tree<'a>
 
-type BreadCrumbs<'a> = Crumb<'a> list 
+type BreadCrumbs<'a> = Crumb<'a> list
 
 type Zipper<'a> = Tree<'a> * BreadCrumbs<'a>
+
+// From weaving a web
+type Ctx<'a> = 
+    | Top
+    | Node' of 'a * Ctx<'a> * Tree<'a>
+    | Node'' of 'a * Tree<'a> * Ctx<'a>
 
 let goLeft (tree, bs) =
     match tree with 
@@ -73,7 +74,7 @@ let goRight (tree, bs) =
     | Node (x, l, r) -> Some (r, (RightCrumb (x, l)) :: bs)
     | Empty -> None
 
-let goUp (tree, bs) = 
+let goUp (tree, bs) =
     match tree, bs with 
     | l, LeftCrumb (x, r) :: rest -> Some (Node (x, l, r), rest)
     | r, RightCrumb (x, l) :: rest -> Some (Node (x, l, r), rest)
@@ -89,12 +90,7 @@ let attact t (_, bs) = (t, bs)
 let rec topMost zipper =
     match zipper with 
     | t, [] -> Some t
-    | z -> 
-        option {
-            let! a = goUp z
-            return! (topMost a) 
-        }
-
+    | z -> goUp z >>= topMost
 
 let t = 
     Some (freeTree, [])

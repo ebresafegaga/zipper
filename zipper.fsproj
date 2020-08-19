@@ -11,6 +11,9 @@
     <Compile Include="Zipper.fs" />
     <Compile Include="ListZipper.fs" />
     <Compile Include="FileSystem.fs" />
+    <Compile Include="TheZipper.fs" />
+    <Compile Include="Deriv.fs" />
+    <Compile Include="Weaving.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
