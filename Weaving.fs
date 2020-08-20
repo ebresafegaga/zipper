@@ -70,7 +70,8 @@ let right =
     | At { it = t; ctx = If'' (p, c, b) } -> At { it = b; ctx = If'''(p, t, c) }
     | At { ctx = If''' _ } as x -> x
 
-module AWeb =
+#nowarn "40" // Recursive values and weird F# runtime initialization "sanity" check
+module Web =
 
     open System // for this guy: Lazy<'a>
 
@@ -83,52 +84,8 @@ module AWeb =
           left: Loc<'a> Lazy
           right: Loc<'a> Lazy }
 
-    let rec weave l0 =
-        function
-        | Var s -> l0
-        | Abs (s, t1) ->
-            let rec l1 =
-                lazy At { it = t1
-                          down = weave l1 t1
-                          up = l0
-                          left = l1
-                          right = l1 }
-            l1
-        | App (t1, t2) -> 
-            let rec l1 = 
-                lazy At { it = t1
-                          down = weave l1 t1
-                          up = l0
-                          left = l1
-                          right = l2 }
-            and l2 = 
-                lazy At { it = t2
-                          down = weave l2 t2
-                          up = l0
-                          left = l1
-                          right = l2 }
-            l1
-        | If (t1, t2, t3) -> 
-            let rec l1 = 
-                lazy At { it = t1
-                          down = weave l1 t1
-                          up = l0
-                          left = l1
-                          right = l2 }
-            and l2 = 
-                lazy At { it = t2
-                          down = weave l2 t2
-                          up = l0
-                          left = l1
-                          right = l2 }
-            and l3 = 
-                lazy At { it = t3 
-                          down = weave l3 t3 
-                          up = l0 
-                          left = l2 
-                          right = l3 }
-            l1
-
+    
+    // These functions are too general ...
     let loc0 wv l0 = l0
     let loc1 wv l0 t1 = 
         let rec l1 =
@@ -172,3 +129,63 @@ module AWeb =
                           left = l2 
                           right = l3 }
         l1
+
+    let rec weave l0 =
+        function
+        | Var s -> l0
+        | Abs (s, t1) -> loc1 weave l0 t1
+            // let rec l1 =
+            //     lazy At { it = t1
+            //               down = weave l1 t1
+            //               up = l0
+            //               left = l1
+            //               right = l1 }
+            // l1
+        | App (t1, t2) -> 
+            let rec l1 = 
+                lazy At { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+            l1
+        | If (t1, t2, t3) -> 
+            let rec l1 = 
+                lazy At { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l2 = 
+                lazy At { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 }
+            and l3 = 
+                lazy At { it = t3 
+                          down = weave l3 t3 
+                          up = l0 
+                          left = l2 
+                          right = l3 }
+            l1
+
+    let top t =
+        let rec r = 
+            lazy At { it = t
+                      down = weave r t 
+                      up = r 
+                      left = r
+                      right = r }
+        r
+
+module ReadWriteWeb = 
+    
+
+    let () = ()
