@@ -55,34 +55,32 @@ let left =
     | At { ctx = Top } as x -> x
     | At { ctx = Abs' _ } as x -> x
     | At { ctx = App' _ } as x -> x
-    | At { it = t; ctx = App'' (e, c) } -> At { it = e; ctx = App' (c, t) }
+    | At { it = t; ctx = App'' (e, c) } -> At { it = e; ctx = App'(c, t) }
     | At { ctx = If' _ } as x -> x
-    | At { it = t; ctx = If'' (p, c, e) } -> At { it = p; ctx = If' (c, t, e) }
-    | At { it = t; ctx = If''' (p, e, c) } -> At { it = e; ctx = If'' (p, c, t) }
+    | At { it = t; ctx = If'' (p, c, e) } -> At { it = p; ctx = If'(c, t, e) }
+    | At { it = t; ctx = If''' (p, e, c) } -> At { it = e; ctx = If''(p, c, t) }
 
 let right =
     function
     | At { ctx = Top } as x -> x
     | At { ctx = Abs' _ } as x -> x
-    | At { it = f; ctx = App' (c, e) } -> At { it = e; ctx = App'' (f, c) }
+    | At { it = f; ctx = App' (c, e) } -> At { it = e; ctx = App''(f, c) }
     | At { ctx = App'' _ } as x -> x
-    | At { it = t; ctx = If' (c, a, b) } -> At { it = a; ctx = If'' (t, c, b) }
-    | At { it = t; ctx = If'' (p, c, b) } -> At { it = b; ctx = If''' (p, t, c) }
+    | At { it = t; ctx = If' (c, a, b) } -> At { it = a; ctx = If''(t, c, b) }
+    | At { it = t; ctx = If'' (p, c, b) } -> At { it = b; ctx = If'''(p, t, c) }
     | At { ctx = If''' _ } as x -> x
 
 // #nowarn "40" // Recursive values and weird F# runtime initialization "sanity" check
 module Web =
 
     type Loc<'a> = At of at<'a>
-
+    
     and at<'a> =
         { it: 'a
           down: Loc<'a> Lazy
           up: Loc<'a> Lazy
           left: Loc<'a> Lazy
           right: Loc<'a> Lazy }
-
-    let unAt (At a) = a
 
 
     // These functions are too general ...
@@ -153,73 +151,76 @@ module Web =
 
     let rec weave l0 =
         function
-        | Var _ -> l0
-        | Abs (_, t1) ->
-            let rec l1 =
-                At
-                    { it = t1
-                      down = weave (lazy l1) t1
-                      up = l0
-                      left = lazy l1
-                      right = lazy l1 }
-
-            lazy l1
+        | Var s -> l0
+        | Abs (s, t1) -> loc1 weave l0 t1
+        // let rec l1 =
+        //     lazy At { it = t1
+        //               down = weave l1 t1
+        //               up = l0
+        //               left = l1
+        //               right = l1 }
+        // l1
         | App (t1, t2) ->
             let rec l1 =
-                At
-                    { it = t1
-                      down = weave (lazy l1) t1
-                      up = l0
-                      left = lazy l1
-                      right = lazy l2 }
+                lazy
+                    (At
+                        { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 })
 
             and l2 =
-                At
-                    { it = t2
-                      down = weave (lazy l2) t2
-                      up = l0
-                      left = lazy l1
-                      right = lazy l2 }
+                lazy
+                    (At
+                        { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 })
 
-            lazy l1
+            l1
         | If (t1, t2, t3) ->
             let rec l1 =
-                At
-                    { it = t1
-                      down = weave (lazy l1) t1
-                      up = l0
-                      left = lazy l1
-                      right = lazy l2 }
+                lazy
+                    (At
+                        { it = t1
+                          down = weave l1 t1
+                          up = l0
+                          left = l1
+                          right = l2 })
 
             and l2 =
-                At
-                    { it = t2
-                      down = weave (lazy l2) t2
-                      up = l0
-                      left = lazy l1
-                      right = lazy l2 }
+                lazy
+                    (At
+                        { it = t2
+                          down = weave l2 t2
+                          up = l0
+                          left = l1
+                          right = l2 })
 
             and l3 =
-                At
-                    { it = t3
-                      down = weave (lazy l3) t3
-                      up = l0
-                      left = lazy l2
-                      right = lazy l3 }
+                lazy
+                    (At
+                        { it = t3
+                          down = weave l3 t3
+                          up = l0
+                          left = l2
+                          right = l3 })
 
-            lazy l1
+            l1
 
     let top t =
         let rec r =
-            At
-                { it = t
-                  down = weave (lazy r) t
-                  up = lazy r
-                  left = lazy r
-                  right = lazy r }
-        lazy r
+            lazy
+                (At
+                    { it = t
+                      down = weave r t
+                      up = r
+                      left = r
+                      right = r })
 
-    let down (Lazy (At t)) = t.down
+        r
 
 module ReadWriteWeb =
 
@@ -274,7 +275,7 @@ module ReadWriteWeb =
         and upd' fl t1 t2 = fl t1 t2
 
         fl1
-    
+
     let loc3 wv fl0' =
         let rec fl1 t1 t2 t3 =
             At
@@ -311,9 +312,9 @@ module ReadWriteWeb =
     let rec weave fl0 =
         function
         | Var _ as v -> loc0 weave (fl0 v)
-        | Abs (s, t1) -> loc1 weave (fun t1' -> fl0 (Abs (s, t1'))) t1
-        | App (t1, t2) -> loc2 weave (fun t1' t2' -> fl0 (App (t1', t2'))) t1 t2
-        | If (t1, t2, t3) -> loc3 weave (fun t1' t2' t3' -> fl0 (If (t1', t2', t3'))) t1 t2 t3
+        | Abs (s, t1) -> loc1 weave (fun t1' -> fl0 (Abs(s, t1'))) t1
+        | App (t1, t2) -> loc2 weave (fun t1' t2' -> fl0 (App(t1', t2'))) t1 t2
+        | If (t1, t2, t3) -> loc3 weave (fun t1' t2' t3' -> fl0 (If(t1', t2', t3'))) t1 t2 t3
 
     let top =
         let rec fr t =
@@ -326,61 +327,10 @@ module ReadWriteWeb =
 
         fr
 
-    module Interface = 
-        type Weaver<'a> = W of (('a -> Loc<'a>) -> Loc<'a>)
-        let unW (W f) = f
-        
-        let call wv fl0 t = unW (wv t) fl0
-        
-        let con0 wv k = W (fun fl0 -> loc0 (call wv) (fl0 k))
-        let con1 wv k t1 = 
-            W (fun fl0 -> loc1 (call wv) (k >> fl0) t1)
-        let con2 wv k t1 t2 =
-            W (fun fl0 -> loc2 (call wv) (fun t1 t2 -> fl0 (k t1 t2)) t1 t2)
-        let con3 wv k t1 t2 t3 =
-            W (fun fl0 -> loc3 (call wv) (fun t1 t2 t3 -> fl0 (k t1 t2 t3)) t1 t2 t3)
+    type Weaver<'a> = W of (('a -> Loc<'a>) -> Loc<'a>)
+    let unW (W f) = f
 
-        let explore wv =
-            let rec fr t = 
-                At { it = t 
-                     fdown = call wv fr 
-                     fup = fr 
-                     fleft = fr
-                     fright = fr }
-            fr        
+    let call wv fl0 t = unW (wv t) fl0
 
-        // let rec apply f xs = 
-        //     match xs with 
-        //     | [x] -> f x
-        //     | x :: xs -> apply (f x) xs
-        //     | [] -> failwith "Empty list"
-        
-        // the direction we're moving 
-        type Direction = L | R
-        let loc wv fl0' = 
-            let rec f ts p =
-                let length = List.length ts
-                let check p = 
-                    function 
-                    | L -> if p-1 < 0 then p else p-1
-                    | R -> if p+1 >= length then p else p+1
-                let chg ls pos value = 
-                    ls |> List.mapi (fun i x -> if i = pos then value else x)
-                let upd fl ts pos a = 
-                    let nl = chg ts pos a
-                    fl nl pos
-
-                At
-                    { it = ts.[p]
-                      fdown =  wv (upd f ts p)
-                      fup = fun l -> let nl = chg ts p l in fl0' nl
-                      fleft = wv (upd f ts (check p L))
-                      fright = wv (upd f ts (check p R)) }
-           
-
-            f
-
-        // Excercise 1
-        // ('a -> Weaver<'a>) -> ('a list -> 'a) -> ('a list -> Weaver<'a>)
-        let con wv kf vs =
-            W (fun fl0 -> loc (call wv) (kf >> fl0) vs 0)
+    let con0 wv k = W (fun fl0 -> loc0 (call wv) (fl0 k))
+    let con1 wv k t1 = W

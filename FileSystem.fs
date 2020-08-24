@@ -17,10 +17,10 @@ let myDisk =
     Folder
         ("root",
          [ File("fff.wap", "some data")
-           File("coolest_fsprogram.fs", "[<EntryPoint>] let main _= 0")
-           Folder("pics", [ File("dancing.jpg", "someone dancing!") ])
+           File("coolest_fsprogram.fs", "[<EntryPoint>] let main _= printfn 100; 0")
+           Folder("pics", [ File ("dancing.jpg", "someone dancing!") ])
            File("random.hs", "main = undefined")
-           Folder("source_code", [ File("cool.hs", "main = print $ fix error") ]) ])
+           Folder("source_code", [ File ("cool.hs", "main = print $ fix error") ]) ])
 
 type FSCrumb = FSCrumb of Name * FSItem list * FSItem list
 type FSZipper = FSItem * FSCrumb list

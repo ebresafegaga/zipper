@@ -12,12 +12,12 @@ type Ctx<'a> =
 
 type D<'a> = D of 'a * Ctx<'a>
 
-let f () = List.rev >> List.tail >> List.rev
+let f _ = List.rev >> List.tail >> List.rev
 
 let left (D (v, ctx)) =
     match ctx with
-    | Top -> D (v, ctx)
-    | Data (a, c, b) -> D (List.last a, Data (f () a, c, b))
+    | Top -> D(v, ctx)
+    | Data (a, c, b) -> D (List.last a, Data (f a a, c, b))
 
 let goForward ls bs =
     match ls, bs with
