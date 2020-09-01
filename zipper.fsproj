@@ -14,6 +14,8 @@
     <Compile Include="TheZipper.fs" />
     <Compile Include="Deriv.fs" />
     <Compile Include="Weaving.fs" />
+    <Compile Include="Reader.fs" />
+    <Compile Include="Labyrinth.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

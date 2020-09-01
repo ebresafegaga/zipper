@@ -59,7 +59,7 @@ let fsRename name =
 
 let fsNewFile file =
     function
-    | Folder (name, items), bs -> Folder(name, file :: items), bs
+    | Folder (name, items), bs -> Folder (name, file :: items), bs
     | File _, _ -> failwith "Cannot add a file to a file, duh!"
 
 let newFocus = (myDisk, []) |> fsTo "pics" |> fsUp

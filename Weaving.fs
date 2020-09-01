@@ -197,7 +197,7 @@ module Web =
                       down = weave (lazy l2) t2
                       up = l0
                       left = lazy l1
-                      right = lazy l2 }
+                      right = lazy l3 }
 
             and l3 =
                 At
@@ -220,6 +220,8 @@ module Web =
         lazy r
 
     let down (Lazy (At t)) = t.down
+    let right (Lazy (At t)) = t.right
+    let left (Lazy (At t)) = t.left
 
 module ReadWriteWeb =
 
@@ -360,8 +362,8 @@ module ReadWriteWeb =
         let loc wv fl0' = 
             let rec f ts p =
                 let length = List.length ts
-                let check p = 
-                    function 
+                let check p = // Should we move with p or p+1 or p-1?
+                    function
                     | L -> if p-1 < 0 then p else p-1
                     | R -> if p+1 >= length then p else p+1
                 let chg ls pos value = 
@@ -376,7 +378,6 @@ module ReadWriteWeb =
                       fup = fun l -> let nl = chg ts p l in fl0' nl
                       fleft = wv (upd f ts (check p L))
                       fright = wv (upd f ts (check p R)) }
-           
 
             f
 

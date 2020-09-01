@@ -102,5 +102,3 @@ let t =
     >>= goRight
     >>= goUp
     >>= topMost
-
-let getter a = a.contents 
