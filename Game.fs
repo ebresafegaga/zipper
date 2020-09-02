@@ -116,7 +116,7 @@ let readKey () =
 //
 // this must return one of then Directions given to it 
 // 
-let rec getInputKey (list: Direction list) : Direction =
+let rec getInputKey list =
     let k = readKey ()
 
     let ret key = 
@@ -125,18 +125,16 @@ let rec getInputKey (list: Direction list) : Direction =
             beep ();
             getInputKey list // NOTE: Tail call 
 
-    //
-    // TODO: add other keys 
-    // 
+    
     match k with 
-    | System.ConsoleKey.DownArrow -> ret Down
-    | System.ConsoleKey.UpArrow -> ret Up
-    | System.ConsoleKey.LeftArrow -> ret Left
-    | System.ConsoleKey.RightArrow -> ret Right 
+    | System.ConsoleKey.DownArrow | System.ConsoleKey.X -> ret Down
+    | System.ConsoleKey.UpArrow | System.ConsoleKey.W -> ret Up
+    | System.ConsoleKey.LeftArrow | System.ConsoleKey.A-> ret Left
+    | System.ConsoleKey.RightArrow | System.ConsoleKey.D -> ret Right 
     | _ -> beep (); getInputKey list // NOTE: Tail call
     
 
-let directions (thread, node) = 
+let directions ((thread, node): Zipper<_>) = 
     match thread, node with 
     | _, DeadEnd _ -> [Down]
     | _, Passage _ -> [Up; Down] 
