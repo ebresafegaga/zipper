@@ -9,7 +9,6 @@
 // https://twitter.com/TartanLlama/status/1300721014532444160
 // 
 let fn f vs =
-
     let folder v map =
         let k = f v 
         match Map.tryFind k map with
