@@ -1,14 +1,5 @@
 module Zipper
 
-type OptionBuiler () =
-    member x.Return a = Some a
-    member x.ReturnFrom a = a
-    member x.Bind (option, f) = option |> Option.bind f
-
-let option = OptionBuiler ()
-
-let (>>=) m f = m |> Option.bind f
-
 type Tree<'a> =
     | Empty
     | Node of 'a * Tree<'a> * Tree<'a>

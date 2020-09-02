@@ -8,18 +8,19 @@ type Node<'a> =
     | DeadEnd of 'a 
     | Passage of 'a * Node<'a> 
     | Fork of 'a * Node<'a> * Node<'a> 
-    | Gold 
+    | Gold of 'a
 
 let get = 
     function 
     | DeadEnd a | Passage (a, _) 
-    | Fork (a, _, _) -> a
+    | Fork (a, _, _) | Gold a -> a
 
 let put a = 
     function
     | DeadEnd _ -> DeadEnd a 
     | Passage (_, node) -> Passage (a, node)
     | Fork (_, n1, n2) -> Fork (a, n1, n2)
+    | Gold _ -> Gold a
 
 // let gold = failwith ""
 
@@ -30,7 +31,7 @@ let lab =
             DeadEnd (2, 0)), 
         Passage ((4, 2), 
             Fork ((1, 2), 
-                Passage ((2, 3), Gold), 
+                Passage ((2, 3), Gold (2, 2)), 
                 DeadEnd (2, 1))))
 
 
@@ -52,6 +53,7 @@ let turnRight (t: Thread) : Thread = t @ [TurnRight]
 let rec retreive (t: Thread) node = 
     match t, node with 
     | [], _ -> get node
+    | _, Gold a -> assert false; a // this shouldn't happen 
     | _, DeadEnd a -> assert false; a // this shouldn't happen 
     | TurnLeft :: bs, Fork (_, l, _) -> retreive bs l 
     | TurnRight :: bs, Fork (_, _, r) -> retreive bs r
@@ -69,7 +71,9 @@ let rec update f (t: Thread) node =
     | TurnLeft :: bs, Fork (a, l, r) -> Fork (a, update f bs l, r) 
     | TurnRight :: bs, Fork (a, l, r) -> Fork (a, l, update f bs r)
     | KeepStraightOn :: bs, Passage (a, s) -> Passage (a, update f bs s)
-    | _, DeadEnd a -> failwith "update: _, DeadEnd a" 
+    // These cases should not normally happen
+    | _, DeadEnd a -> DeadEnd (f a)
+    | _, Gold a -> Gold (f a)
     | (TurnLeft | TurnRight) :: bs, Passage (_, d) -> 
         failwith "update: (TurnLeft | TurnRight) :: bs, Passage (_, d)"
     | KeepStraightOn :: bs, Fork (_, l, _) -> 
@@ -85,6 +89,8 @@ module Ariadne =
     type Thread<'a> = Branch<'a> list 
 
     type Zipper<'a> = Thread<'a> * Node<'a> 
+
+    let create node : Zipper<'a> = ([], node)
 
     let turnRight (zipper: Zipper<'a>) : Zipper<'a> option =
         match zipper with 
@@ -121,3 +127,16 @@ module Ariadne =
         | thread, Fork (x, l, r) -> thread, Fork (f x, l, r)
         | thread, Passage (x, d) -> thread, Passage (f x, d)
         | thread, DeadEnd x -> thread, DeadEnd (f x)
+        | thread, Gold x -> thread, Gold (f x)
+    
+    let rec map f = 
+        function 
+        | DeadEnd x -> DeadEnd (f x)
+        | Passage (x, node) -> Passage (f x, map f node)
+        | Fork (x, l, r) -> Fork (f x, map f l, map f r)
+        | Gold x -> Gold (f x)
+    
+    let mapZipper f g ((thread, node): Zipper<'a>) : Zipper<'a> = 
+        let t = List.map f thread
+        let n = map g node
+        (t, n)
