@@ -125,7 +125,7 @@ let rec getInputKey list =
             beep ();
             getInputKey list // NOTE: Tail call 
 
-    
+
     match k with 
     | System.ConsoleKey.DownArrow | System.ConsoleKey.X -> ret Down
     | System.ConsoleKey.UpArrow | System.ConsoleKey.W -> ret Up
@@ -154,9 +154,12 @@ let goThere direction zipper =
     | Left -> zipper |> turnLeft
     | Right -> zipper |> turnRight
 
+let printStateInfo x = ()
 
 let printInfo ((thread, node): Zipper<_>) =
-    printfn "Previous Locations: %A" thread
+    // printfn "Previous Locations: %A" thread
+
+    printStateInfo thread
 
     if visited node then 
         red ()
@@ -202,7 +205,7 @@ and restart () =
 
 and game (zipper: Zipper<_>) = 
     printInfo zipper 
-
+    
     let key = getInputKey $ directions zipper
 
     let result = goThere key zipper

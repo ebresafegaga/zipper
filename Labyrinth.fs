@@ -118,6 +118,10 @@ module Ariadne =
         match x with 
         | _, node -> get node
 
+    let top (x: Zipper<'a>) = 
+        match x with 
+        | _, node -> node 
+
     let put (x: Zipper<'a>) a : Zipper<'a> = 
         match x with 
         | thread, _ -> thread, a
@@ -135,8 +139,20 @@ module Ariadne =
         | Passage (x, node) -> Passage (f x, map f node)
         | Fork (x, l, r) -> Fork (f x, map f l, map f r)
         | Gold x -> Gold (f x)
-    
+
+    let rec mapTop f = 
+        function 
+        | DeadEnd x -> DeadEnd (f x)
+        | Passage (x, node) -> Passage (f x, node)
+        | Fork (x, l, r) -> Fork (f x, l, r)
+        | Gold x -> Gold (f x)
+
     let mapZipper f g ((thread, node): Zipper<'a>) : Zipper<'a> = 
         let t = List.map f thread
         let n = map g node
+        (t, n)
+    
+    let mapTopZipper f g ((thread, node): Zipper<'a>) : Zipper<'a> = 
+        let t = List.map f thread
+        let n = mapTop g node
         (t, n)
