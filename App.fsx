@@ -99,9 +99,9 @@ type LeftOrRight = Lefty | Righty
 let random = System.Random 193
 
 let o = System.Object ()
-let start () = lock o (fun () -> random.Next (2, 4))
-let game () = lock o (fun () -> random.Next (1, 4))
-let gold () = lock o (fun () -> random.Next (2, 4))
+let start () = random.Next (2, 4)
+let game () = random.Next (1, 4)
+let gold () = random.Next (2, 4)
 
 
 let toItem (x:int) = enum<Item> x

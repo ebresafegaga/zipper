@@ -58,7 +58,7 @@ let straight =
     A PASSAGE
     """
 
-let gold = 
+let drawgold = 
     """
                  /\
            .--._/  \_.--.
@@ -93,10 +93,90 @@ let deadend =
 //
 // TODO: Generates a random maze when called
 //  
+
+let l = 
+    Fork (White, 
+        Fork (White, 
+            DeadEnd White,
+            Passage (White, 
+                DeadEnd White)), 
+        Gold White)
+ 
+
+type Item = 
+    | Dead = 1
+    | Fork = 2
+    | Passage = 3
+    | Gold = 4
+
+type WhoShouldGetTheGold = Me | NotMe 
+
+type LeftOrRight = Lefty | Righty 
+
+
+//
+// seed with just a random prime
+//
+let random = System.Random 193
+
+let o = System.Object ()
+let begn () = random.Next (2, 4)
+let in_game () = random.Next (1, 4)
+let gold () = random.Next (2, 4)
+
+
+let toItem (x:int) = enum<Item> x
+
+let left_OR_right () = 
+    match gold () |> toItem with 
+    | Item.Passage -> Lefty
+    | Item.Fork -> Righty
+    | _ -> Lefty // should never be the case !!
+
+let rec gen depth ingame x limit = 
+
+    let step = 1
+    if depth > limit then 
+        match x with 
+        | NotMe -> DeadEnd 0
+        | Me -> Gold 100000
+    else
+        let top =
+            if ingame then in_game () 
+            else begn () 
+            |> toItem
+    
+        match x with 
+        | Me -> 
+            let gold = gold () |> toItem
+
+            match top, gold with 
+            | Item.Fork, _ -> 
+                match left_OR_right () with 
+                | Righty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true Me limit)
+                | Lefty -> Fork (0, gen (depth+1) true Me limit, gen (depth+2) true NotMe limit)
+            // | Item.Fork, _ -> Fork (0, gen (depth+1) true NotMe, gen (depth+2) true NotMe)
+            // | Item.Passage, Item.Passage -> Passage (0, gen (depth+2) true Me)
+            | Item.Passage, _ -> Passage (0, gen (depth+2) true Me limit)
+            | Item.Dead, _ -> 
+                match x with 
+                | Me -> Gold 1000000 
+                | NotMe -> DeadEnd 0
+
+        | NotMe -> 
+            match top with 
+            | Item.Fork -> 
+                match left_OR_right () with 
+                | Righty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
+                | Lefty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
+            
+            | Item.Passage-> Passage (0, gen (depth+2) true NotMe limit)
+            | Item.Dead -> DeadEnd 0
+
 let genMaze () = 
-    lab 
+    gen 0 false Me 10
     |> map (fun _ -> White)
-    |> create
+    |> create 
     
 
 let beep () = System.Console.Beep ()
@@ -177,7 +257,7 @@ let printInfo ((thread, node): Zipper<_>) =
         printfn "%s" cross
         printfn "You can go left, right or back!"
         restore ()
-    | Gold _ -> printfn "%s" gold; restore ()
+    | Gold _ -> printfn "%s" drawgold; restore ()
 
 let printWonInfo x = printInfo x
 
@@ -205,7 +285,7 @@ and restart () =
 
 and game (zipper: Zipper<_>) = 
     printInfo zipper 
-    
+
     let key = getInputKey $ directions zipper
 
     let result = goThere key zipper
