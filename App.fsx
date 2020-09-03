@@ -272,8 +272,6 @@ let rec findGold zipper =
             printfn "So no need? Going back anyways"
             
             findGold ((visit zipper) |> bget)
-        
-
 
 let z () = 
     gen 0 false Me 5
@@ -327,3 +325,5 @@ let ``mod`` x y = x % y
 let filter xs =
     let f a s  = a :: (List.filter (fun x -> x mod a <> 0) s)
     List.foldBack f xs []
+
+ 

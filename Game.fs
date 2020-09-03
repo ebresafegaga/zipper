@@ -90,19 +90,6 @@ let deadend =
        ||_______________||
     """
 
-//
-// TODO: Generates a random maze when called
-//  
-
-let l = 
-    Fork (White, 
-        Fork (White, 
-            DeadEnd White,
-            Passage (White, 
-                DeadEnd White)), 
-        Gold White)
- 
-
 type Item = 
     | Dead = 1
     | Fork = 2
@@ -174,7 +161,8 @@ let rec gen depth ingame x limit =
             | Item.Dead -> DeadEnd 0
 
 let genMaze () = 
-    gen 0 false Me 10
+    let a () = gen 0 false Me 10
+    a ()
     |> map (fun _ -> White)
     |> create 
     
@@ -214,9 +202,11 @@ let rec getInputKey list =
     | _ -> beep (); getInputKey list // NOTE: Tail call
     
 
-let directions ((thread, node): Zipper<_>) = 
-    match thread, node with 
+// TODO: rename this function 
+let directions (zipper: Zipper<'a>) = 
+    match zipper with 
     | _, DeadEnd _ -> [Down]
+    | [], Passage _ -> [Up] 
     | _, Passage _ -> [Up; Down] 
     | [], Fork _ -> [Left; Right]
     | _, Fork _ -> [Left; Right; Down]
@@ -237,7 +227,16 @@ let goThere direction zipper =
 let printStateInfo x = ()
 
 let printInfo ((thread, node): Zipper<_>) =
-    // printfn "Previous Locations: %A" thread
+
+    let t = 
+        thread
+        |> List.rev 
+        |> List.map (function 
+                     | TurnLeft _ -> "Left"
+                     | TurnRight _ -> "Right"
+                     | KeepStraightOn _ -> "Straight")
+
+    printfn "Your position from the start: %A" t
 
     printStateInfo thread
 
@@ -291,11 +290,12 @@ and game (zipper: Zipper<_>) =
     let result = goThere key zipper
 
     let check () = 
-        match result with 
-        | None -> 
-            // Ideally, we shouldn't get here
+        match result with
+        | None ->
+            // Ideally, we shouldn't get here.
+            // But if we get here, just know there's a bug in the "directions" function.
             failwithf "can't go %A on %A" key zipper 
-        | Some x -> x |> visitThread
+        | Some x -> visitThread x
 
     let z = check ()
     if won z then 
