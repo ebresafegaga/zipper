@@ -19,6 +19,42 @@ let fn f vs =
 
 
 
+type Nat = Zero | Succ of Nat
+
+type System.Int32 with
+    member x.Return a = a
+    member x.Quote a = a
+
+let quote = 23
+let workflow = quote {
+    return 1
+}
+
+
+// 
+// From the paper : "Do we need Dependent types?"
+//
+
+let rec (<<|) funcs args = 
+    match funcs, args with 
+    | f :: fs, a :: as' -> f a :: (fs <<| as')
+    | _, _ -> []
+
+let rec repeat f = [ yield f; yield! repeat f ]
+
+let succ k funcs args = funcs <<| args |> k
+let zero = id
+let one fs a = succ zero fs a
+let two fs a = succ one fs a
+let three fs a = succ two fs a
+let four fs a = succ three fs a
+let five fs a = succ four fs a
+
+// let zipWith n f = n (repeat f)
+
+// let v = zipWith four (fun a b c d -> a + b + c + d) [1;3;5] [] [1;3;5] [2;4;5]
+
+
 // notRev x ++ notRev y == notRev (y ++ x)
 
 let rec zipWith f xs ys =
