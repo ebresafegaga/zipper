@@ -64,7 +64,7 @@ let rec zipWith f xs ys =
     | _ -> [] // not the same length 
  
 let rec accumulate f vector = 
-    match vector with 
+    match vector with
     | [] -> []
     | row :: rest -> 
         List.reduce f (List.head row :: List.map List.head rest)
@@ -168,7 +168,7 @@ let rec gen depth ingame x limit =
             else start () 
             |> toItem
     
-        match x with 
+        match x with
         | Me -> 
             let gold = gold () |> toItem
 
@@ -192,7 +192,7 @@ let rec gen depth ingame x limit =
                 | Righty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
                 | Lefty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
             
-            | Item.Passage-> Passage (0, gen (depth+2) true NotMe limit)
+            | Item.Passage -> Passage (0, gen (depth+2) true NotMe limit)
             | Item.Dead -> DeadEnd 0
 
 let rec height = 
@@ -307,8 +307,7 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
                     goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
                 | false ->  
                     printfn "Left branch not visited, going there!" 
-                    left
-        
+                    left      
         | _ -> 
             printfn "Trying left..."
             let left = zipper |> bget |> turnLeft |> get 
@@ -322,7 +321,7 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
     | Some (KeepStraightOn Black) -> 
         printfn "At a passage, going back!"
         goBackUntilYouFindUnvisitedThenEnter (zipper |> bget)
-    // | Some (KeepStraightOn White) -> zipper 
+    | Some (KeepStraightOn White) -> assert false; zipper // This should never be the case 
     | None -> zipper
 
 let rec findGold zipper =
