@@ -183,11 +183,3 @@ let traverse f list =
 //         |> traverse
 //         |> ApiActionResult.bind
 //     getPurchaseIds >> getProductInfoLifted
-        
-let foldl f init l = 
-    List.foldBack (fun a s -> fun x -> f x a |> s) l id init
-
-//let fff x = foldl (fun s a -> a :: s) 
-
-let seqA list = 
-    List.foldBack (fun a s x -> a x :: s x) list (fun _ -> [])

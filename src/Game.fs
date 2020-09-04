@@ -106,7 +106,6 @@ type LeftOrRight = Lefty | Righty
 //
 let random = System.Random 193
 
-let o = System.Object ()
 let begn () = random.Next (2, 4)
 let in_game () = random.Next (1, 4)
 let gold () = random.Next (2, 4)
@@ -120,6 +119,9 @@ let left_OR_right () =
     | Item.Fork -> Righty
     | _ -> Lefty // should never be the case !!
 
+//
+// Generate a random tree of arbitrary depth.
+//
 let rec gen depth ingame x limit = 
 
     let step = 1
@@ -157,7 +159,7 @@ let rec gen depth ingame x limit =
                 | Righty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
                 | Lefty -> Fork (0, gen (depth+1) true NotMe limit, gen (depth+2) true NotMe limit)
             
-            | Item.Passage-> Passage (0, gen (depth+2) true NotMe limit)
+            | Item.Passage -> Passage (0, gen (depth+2) true NotMe limit)
             | Item.Dead -> DeadEnd 0
 
 let genMaze () = 
@@ -190,7 +192,7 @@ let rec getInputKey list =
     let ret key = 
         if List.contains key list then key 
         else 
-            beep ();
+            beep ()
             getInputKey list // NOTE: Tail call 
 
 
@@ -205,6 +207,7 @@ let rec getInputKey list =
 // TODO: rename this function 
 let directions (zipper: Zipper<'a>) = 
     match zipper with 
+    | [], DeadEnd _ -> [] // Ideally, the game shouldn't start with a dead end
     | _, DeadEnd _ -> [Down]
     | [], Passage _ -> [Up] 
     | _, Passage _ -> [Up; Down] 

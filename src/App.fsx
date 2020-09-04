@@ -100,6 +100,13 @@ let rec qsort l =
         (qsort left) @ [x] @ (qsort right)
     | [] -> []
 
+let rec qsort' l =
+    let folder x xs = 
+        let left = [ for i in xs do if i <= x then yield i ]
+        let right = [ for i in xs do if i > x then yield i ]
+        qsort' left @ [x] @ qsort' right
+    List.foldBack folder l []
+
 #load "Labyrinth.fs"
 open Labyrinth
 
@@ -244,44 +251,91 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
     match List.tryHead (fst zipper) with 
     | Some (TurnLeft _) -> 
         printfn "At left of a fork"
-        printfn "Trying right..."
-        let right = zipper |> bget |> turnRight |> get 
-        match visited $ snd right with 
-        | true -> 
-            printfn "Right branch visited, going back!"
-            goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
-        | false ->
-            printfn "Right branch not visited, going there!" 
-            right
+
+        let me = (zipper |> top)
+
+        match me with 
+        | Fork (_, l, r) ->
+            let vl, vr = visited l, visited r
+            match vl, vr with 
+            | false, _ ->
+                printfn "This node is also a fork and the left is un visited, going there!" 
+                zipper |> turnLeft |> get// goLeft
+            | _, false ->
+                printfn "This node is also a fork and the right is un visited, going there!" 
+                zipper |> turnRight |> get // goRight
+            | true, true ->  // now we can go back
+                let right = zipper |> bget |> turnRight |> get 
+                printfn "Trying right..."
+                match visited $ snd right with 
+                | true -> 
+                    printfn "Right branch visited, going back!"
+                    goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+                | false ->
+                    printfn "Right branch not visited, going there!" 
+                    right
+        | _ -> 
+            let right = zipper |> bget |> turnRight |> get 
+            printfn "Trying right..."
+            match visited $ snd right with 
+            | true -> 
+                printfn "Right branch visited, going back!"
+                goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+            | false ->
+                printfn "Right branch not visited, going there!" 
+                right
     | Some (TurnRight _) -> 
         printfn "At Right of a fork"
-        printfn "Trying left..."
-        let left = zipper |> bget |> turnLeft |> get 
-        match visited $ snd left with 
-        | true -> 
-            printfn "Left branch visited, going back!"
-            goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
-        | false ->  
-            printfn "Left branch not visited, going there!" 
-            left
+        let me = (zipper |> top)
+
+        match me with 
+        | Fork (_, l, r) ->
+            let vl, vr = visited l, visited r
+            match vl, vr with 
+            | false, _ -> 
+                printfn "This node is also a fork and the left is un visited, going there!" 
+                zipper |> turnLeft |> get// goLeft
+            | _, false -> 
+                printfn "This node is also a fork and the right is un visited, going there!" 
+                zipper |> turnRight |> get // goRight
+            | true, true ->  // now we can go back
+                printfn "Trying left..."
+                let left = zipper |> bget |> turnLeft |> get 
+                match visited $ snd left with 
+                | true -> 
+                    printfn "Left branch visited, going back!"
+                    goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+                | false ->  
+                    printfn "Left branch not visited, going there!" 
+                    left
+        
+        | _ -> 
+            printfn "Trying left..."
+            let left = zipper |> bget |> turnLeft |> get 
+            match visited $ snd left with 
+            | true -> 
+                printfn "Left branch visited, going back!"
+                goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+            | false ->  
+                printfn "Left branch not visited, going there!" 
+                left
     | Some (KeepStraightOn Black) -> 
         printfn "At a passage, going back!"
         goBackUntilYouFindUnvisitedThenEnter (zipper |> bget)
     // | Some (KeepStraightOn White) -> zipper 
     | None -> zipper
 
-let rec findGold zipper = 
-    match zipper with 
-    | _, Gold _ -> 
+let rec findGold zipper =
+    match zipper with
+    | _, Gold _ ->
         fst zipper
+        |> List.rev
         |> List.map (function
                     | TurnLeft _ -> "Left"
                     | TurnRight _ -> "Right"
                     | KeepStraightOn _ -> "Straight On")
-        |> List.rev  
     | _, Passage (_, r) -> 
         let zipper = (visit zipper) |> keepStraightOn |> get
-
         printfn "-> Going Straight up"
         findGold zipper
     | _, DeadEnd _ ->
@@ -303,8 +357,8 @@ let rec findGold zipper =
             let zipper = (visit zipper) |> turnRight |> get
             findGold zipper
         | true, true -> 
-            // BUG here
-            printfn "About to enter a fork, but both left and right have been visited"
+            // BUG here?
+            printfn "About at a fork, but both left and right have been visited"
             printfn "So no need? Going back anyways"
             
             findGold ((visit zipper) |> bget)
@@ -315,51 +369,35 @@ let z () =
     |> create
 
 let z' () =
-    let l = z ();
+    let l = z ()
     printfn "%A" l
     System.Console.ReadLine () |> ignore 
     findGold l
 
-
-module Finder = 
-
-    let visit (_, node)= 
-        match node with 
-        | Gold _ -> Gold Black
-        | DeadEnd _ -> DeadEnd Black
-        | Fork (_, l, r) -> Fork (Black, l, r)
-        | Passage (_, node) -> Passage (Black, node)
-
-    let goLeft x =  turnLeft x >>= (visit >> Some) 
-    let goRight x = turnRight x >>= (visit >> Some)
-    let goUp x = keepStraightOn x >>= (visit >> Some)
-    let goBack x = back x >>= (visit >> Some)
-
-    let find zipper = 
-        match zipper with 
-        | _, Gold _ -> 
-            fst zipper
-            |> List.rev
-
-
-
-//  ([], Passage (White,Passage (White,Fork (White,DeadEnd White,Gold White)))) 
-// ["Straight On"; "Straight On"; "Right"]
-// 
-
 let undecidable = 
-    ([], 
-        Fork (White, 
-            Fork (White, 
-                DeadEnd White,
-                Passage (White, 
-                    DeadEnd White)), 
-            Gold White))
-//
+    ([],
+     Fork (White,
+        DeadEnd White,
+        Fork (White,
+           Fork (White,
+                Fork (White,DeadEnd White,DeadEnd White),
+                Fork (White,Gold White,DeadEnd White)),
+           Passage (White,DeadEnd White))))
 
 let ``mod`` x y = x % y
 let filter xs =
     let f a s  = a :: (List.filter (fun x -> x mod a <> 0) s)
     List.foldBack f xs []
 
- 
+let (!@) (Lazy a) = a
+
+let ccc a = !@a + 10 
+
+
+let foldl f init l = 
+    List.foldBack (fun a s -> fun x -> f x a |> s) l id init
+
+//let fff x = foldl (fun s a -> a :: s) 
+
+let seqA list = 
+    List.foldBack (fun a s x -> a x :: s x) list (fun _ -> [])
