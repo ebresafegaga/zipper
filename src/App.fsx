@@ -409,3 +409,58 @@ let foldl f init l =
 
 let seqA list = 
     List.foldBack (fun a s x -> a x :: s x) list (fun _ -> [])
+
+// https://github.com/fsharp/fsharp/issues/867
+open System.Collections.Generic
+
+type A = A of Lazy<A>
+
+let f a = 
+    let vs = HashSet HashIdentity.Reference
+    let rec loop (a: Lazy<A>) = 
+        if vs.Add a then 
+            match a.Value with 
+            | A a -> loop a
+    loop a
+
+let rec va = lazy (A va)
+
+// https://github.com/c-cube/gen/blob/0719c2451a12d586d6b06c378d9021e21d31c82f/bench/bench_persistent.ml#L26-L27
+
+module MList = 
+    type 'a t = 'a node option ref
+      and 'a node = {
+        content : 'a;
+        mutable prev : 'a node;
+        mutable next : 'a node;
+      }
+    
+    type Rec<'a> = 
+        { a : unit -> Rec<'a>
+          b : 'a } 
+    
+    and R<'a> = R of Rec<'a>
+
+    let rec v = { a = (fun () -> v); b = 10}
+    
+
+  // let rec v = R { a = 10;  b = v}
+
+    let create () = ref None
+
+    let is_empty d =
+        match !d with
+        | None -> true
+        | Some _ -> false
+
+    let push_back d x =
+        match !d with
+        | None ->
+          let rec elt = {
+            content = x; prev = elt; next = elt; } in
+          d := Some elt
+        | Some first ->
+          let elt = { content = x; next=first; prev=first.prev; } in
+          first.prev.next <- elt;
+          first.prev <- elt
+

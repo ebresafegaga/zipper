@@ -81,6 +81,15 @@ module Web =
           up: Loc<'a> Lazy
           left: Loc<'a> Lazy
           right: Loc<'a> Lazy }
+    
+    type Loc2<'a> = At2 of at2<'a>
+
+    and at2<'a> =
+        { it2: 'a
+          down2: Loc2<'a> Lazy
+          up2: Loc2<'a> 
+          left2: Loc2<'a> Lazy
+          right2: Loc2<'a> Lazy }
 
     let unAt (At a) = a
 
@@ -208,6 +217,63 @@ module Web =
                       right = lazy l3 }
 
             lazy l1
+    
+    let rec weave2 l0 =
+        function
+        | Var _ -> l0
+        | Abs (_, t1) ->
+            let rec l1 =
+                At2
+                    { it2 = t1
+                      down2 = lazy weave2 l1 t1
+                      up2 = l0
+                      left2 = lazy l1
+                      right2 = lazy l1 }
+            l1
+        | App (t1, t2) ->
+            let rec l1 =
+                At2
+                    { it2 = t1
+                      down2 = lazy weave2 l1 t1
+                      up2 = l0
+                      left2 = lazy l1
+                      right2 = lazy l2 }
+
+            and l2 =
+                At2
+                    { it2 = t2
+                      down2 = lazy weave2 l2 t2
+                      up2 = l0
+                      left2 = lazy l1
+                      right2 = lazy l2 }
+
+            l1
+        | If (t1, t2, t3) ->
+            let rec l1 =
+                At2
+                    { it2 = t1
+                      down2 = lazy weave2 l1 t1
+                      up2 = l0
+                      left2 = lazy l1
+                      right2 = lazy l2 }
+
+            and l2 =
+                At2
+                    { it2 = t2
+                      down2 = lazy weave2 l2 t2
+                      up2 = l0
+                      left2 = lazy l1
+                      right2 = lazy l3 }
+
+            and l3 =
+                At2
+                    { it2 = t3
+                      down2 = lazy weave2 l3 t3
+                      up2 = l0
+                      left2 = lazy l2
+                      right2 = lazy l3 }
+
+            l1
 
     let top t =
         let rec r =
@@ -218,6 +284,16 @@ module Web =
                   left = lazy r
                   right = lazy r }
         lazy r
+    
+    // let top2 t =
+    //     let rec r =
+    //         At2
+    //             { it2 = t
+    //               down2 = lazy weave2 r t
+    //               up2 = r
+    //               left2 = lazy r
+    //               right2 = lazy r }
+    //     r
 
     let down (Lazy (At t)) = t.down
     let right (Lazy (At t)) = t.right
