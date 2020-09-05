@@ -113,18 +113,6 @@ open Labyrinth
 #load "Util.fs"
 open Util
 
-let lab = 
-    Fork ((2, 4), 
-        Fork ((0, 2),
-            DeadEnd (1, 2), 
-            DeadEnd (2, 0)), 
-        Passage ((4, 2), 
-            Fork ((1, 2), 
-                Passage ((2, 3), Gold (2, 2)), 
-                DeadEnd (2, 1))))
-
-
-
 type Item = 
     | Dead = 1
     | Fork = 2
@@ -157,6 +145,9 @@ let left_OR_right () =
 
 let rec gen depth ingame x limit = 
 
+    // 
+    // TODO: make the illegal stated unrepresentable
+    //
     let step = 1
     if depth > limit then 
         match x with 
@@ -277,7 +268,7 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
         | _ -> 
             let right = zipper |> bget |> turnRight |> get 
             printfn "Trying right..."
-            match visited $ snd right with 
+            match visited $ snd right with
             | true -> 
                 printfn "Right branch visited, going back!"
                 goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
@@ -294,7 +285,7 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
             match vl, vr with 
             | false, _ -> 
                 printfn "This node is also a fork and the left is un visited, going there!" 
-                zipper |> turnLeft |> get// goLeft
+                zipper |> turnLeft |> get // goLeft
             | _, false -> 
                 printfn "This node is also a fork and the right is un visited, going there!" 
                 zipper |> turnRight |> get // goRight
@@ -315,16 +306,17 @@ let rec goBackUntilYouFindUnvisitedThenEnter zipper =
             | true -> 
                 printfn "Left branch visited, going back!"
                 goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
-            | false ->  
+            | false ->
                 printfn "Left branch not visited, going there!" 
                 left
-    | Some (KeepStraightOn Black) -> 
+    | Some (KeepStraightOn Black) ->
         printfn "At a passage, going back!"
         goBackUntilYouFindUnvisitedThenEnter (zipper |> bget)
     | Some (KeepStraightOn White) -> assert false; zipper // This should never be the case 
     | None -> zipper
 
 let rec findGold zipper =
+  lazy
     match zipper with
     | _, Gold _ ->
         fst zipper
@@ -336,34 +328,34 @@ let rec findGold zipper =
     | _, Passage (_, r) -> 
         let zipper = (visit zipper) |> keepStraightOn |> get
         printfn "-> Going Straight up"
-        findGold zipper
+        force $ findGold zipper
     | _, DeadEnd _ ->
         //
         // [...;Left;DeadEnd],  [...;Right;DeadEnd], [x;Straight; DeadEnd]
         // x -> (x...;Straight) | (x..;Left) | (x..;Right)
         printfn "-> Deadend" 
         let newZipper =  goBackUntilYouFindUnvisitedThenEnter (visit zipper)
-        findGold newZipper
-    | _, Fork (_,l, r) -> 
+        force $ findGold newZipper
+    | _, Fork (a,l, r) -> 
         let vl, vr = visited l, visited r
         match vl, vr with 
         | false, _ ->
             printfn "A fork, going left, although right may be un visited"
             let zipper = (visit zipper) |> turnLeft |> get
-            findGold zipper
+            force $ findGold zipper
         | _, false -> 
             printfn "A fork, going right, left is visited"
             let zipper = (visit zipper) |> turnRight |> get
-            findGold zipper
+            force $ findGold zipper
         | true, true -> 
             // BUG here?
-            printfn "About at a fork, but both left and right have been visited"
+            printfn "At a fork: %A, but both left and right have been visited" (Fork(a, l, r))
             printfn "So no need? Going back anyways"
             
-            findGold ((visit zipper) |> bget)
+            force $ findGold ((visit zipper) |> bget)
 
 let z () = 
-    gen 0 false Me 5
+    gen 0 false Me 1000
     |> map (fun _ -> White)
     |> create
 
@@ -373,7 +365,24 @@ let z' () =
     System.Console.ReadLine () |> ignore 
     findGold l
 
-let undecidable = 
+type Direction = Left | Right | Up | Down
+
+
+let threadToDirection = 
+    function 
+    | TurnLeft _ -> Left
+    | TurnRight _ -> Right
+    | KeepStraightOn _ -> Up
+
+let hint correct zipper = 
+    let wrong = List.map threadToDirection $ fst zipper
+    let cl, wl = List.length correct, List.length wrong
+
+    if wl <= cl && isSubsetFromStart wrong correct then 
+        correct.[List.length wrong]
+    else Down
+
+let undecidable =
     ([],
      Fork (White,
         DeadEnd White,

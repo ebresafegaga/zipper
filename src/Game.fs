@@ -12,12 +12,28 @@ let welcome = "Welcome to the Labyrinth game. Press any key to continue"
 
 type Player = Ariadne | Theseus | Other of string 
 
-type Direction = Left | Right | Up | Down 
+type Direction = Left | Right | Up | Down
+
+
+let threadToDirection = 
+    function 
+    | TurnLeft _ -> Left
+    | TurnRight _ -> Right
+    | KeepStraightOn _ -> Up
+
+let hint correct zipper = 
+    let wrong = List.map threadToDirection $ fst zipper
+    let cl, wl = List.length correct, List.length wrong
+
+    if wl <= cl && isSubsetFromStart wrong correct then
+        correct.[List.length wrong]
+    else Down
+
 
 // 
 // colour of a node: Black means visited, White means not visited 
 // 
-type colour = Black | White 
+type Colour = Black | White
 
 
 let visitThread = 
@@ -166,8 +182,99 @@ let genMaze () =
     let a () = gen 0 false Me 10
     a ()
     |> map (fun _ -> White)
-    |> create 
-    
+    |> create
+
+let visit x = 
+    let f branch = 
+        match branch with 
+        | _ -> Black
+
+    mapTopZipper id f x
+
+let get = Option.get 
+let bget a = back a |> get 
+
+let rec goBackUntilYouFindUnvisitedThenEnter zipper =
+    match List.tryHead (fst zipper) with 
+    | Some (TurnLeft _) ->
+        let me = (zipper |> top)
+
+        match me with 
+        | Fork (_, l, r) ->
+            let vl, vr = visited l, visited r
+            match vl, vr with 
+            | false, _ ->
+                zipper |> turnLeft |> get// goLeft
+            | _, false ->
+                zipper |> turnRight |> get // goRight
+            | true, true ->  // now we can go back
+                let right = zipper |> bget |> turnRight |> get 
+                match visited $ snd right with 
+                | true -> 
+                    goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+                | false ->
+                    right
+        | _ -> 
+            let right = zipper |> bget |> turnRight |> get 
+            match visited $ snd right with
+            | true -> 
+                goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+            | false ->
+                right
+    | Some (TurnRight _) -> 
+        let me = (zipper |> top)
+
+        match me with 
+        | Fork (_, l, r) ->
+            let vl, vr = visited l, visited r
+            match vl, vr with 
+            | false, _ -> 
+                zipper |> turnLeft |> get // goLeft
+            | _, false -> 
+                zipper |> turnRight |> get // goRight
+            | true, true ->  // now we can go back
+                let left = zipper |> bget |> turnLeft |> get 
+                match visited $ snd left with 
+                | true -> 
+                    goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+                | false ->  
+                    left      
+        | _ -> 
+            let left = zipper |> bget |> turnLeft |> get 
+            match visited $ snd left with 
+            | true -> 
+                goBackUntilYouFindUnvisitedThenEnter (zipper |> bget |> bget)
+            | false ->
+                left
+    | Some (KeepStraightOn Black) ->
+        goBackUntilYouFindUnvisitedThenEnter (zipper |> bget)
+    | Some (KeepStraightOn White) -> assert false; zipper // This should never be the case 
+    | None -> zipper
+
+let rec findGold zipper =
+ lazy
+    match zipper with
+    | _, Gold _ ->
+            fst zipper
+            |> List.rev
+            |> List.map threadToDirection
+    | _, Passage (_, r) -> 
+        let zipper = (visit zipper) |> keepStraightOn |> get
+        force $ findGold zipper
+    | _, DeadEnd _ ->
+        let newZipper =  goBackUntilYouFindUnvisitedThenEnter (visit zipper)
+        force $ findGold newZipper
+    | _, Fork (_,l, r) -> 
+        let vl, vr = visited l, visited r
+        match vl, vr with 
+        | false, _ ->
+            let zipper = (visit zipper) |> turnLeft |> get
+            force $ findGold zipper
+        | _, false -> 
+            let zipper = (visit zipper) |> turnRight |> get
+            force $ findGold zipper
+        | true, true -> 
+            force $ findGold ((visit zipper) |> bget)
 
 let beep () = System.Console.Beep ()
 
@@ -182,27 +289,6 @@ let restore () =
 let readKey () = 
     let k = System.Console.ReadKey false
     k.Key
-
-//
-// this must return one of then Directions given to it 
-// 
-let rec getInputKey list =
-    let k = readKey ()
-
-    let ret key = 
-        if List.contains key list then key 
-        else 
-            beep ()
-            getInputKey list // NOTE: Tail call 
-
-
-    match k with 
-    | System.ConsoleKey.DownArrow | System.ConsoleKey.X -> ret Down
-    | System.ConsoleKey.UpArrow | System.ConsoleKey.W -> ret Up
-    | System.ConsoleKey.LeftArrow | System.ConsoleKey.A-> ret Left
-    | System.ConsoleKey.RightArrow | System.ConsoleKey.D -> ret Right 
-    | _ -> beep (); getInputKey list // NOTE: Tail call
-    
 
 // TODO: rename this function 
 let directions (zipper: Zipper<'a>) = 
@@ -263,6 +349,44 @@ let printInfo ((thread, node): Zipper<_>) =
 
 let printWonInfo x = printInfo x
 
+let rec showHint correct zipper =
+    clearConsole ()
+    printfn "           HINT     " 
+    printfn "%s" gold2
+    printfn "I think you should go %A. Press enter to continue" $ hint correct zipper
+    match readKey () with 
+    | System.ConsoleKey.Enter -> clearConsole()
+    | _ -> beep (); showHint correct zipper
+
+let rec checkHint (correct: Lazy<_>) zipper =
+    match readKey() with 
+    | System.ConsoleKey.H -> 
+        showHint (correct.Force ()) zipper
+        printInfo zipper
+        getInputKey (correct, zipper) (directions zipper)
+    | _ ->  getInputKey (correct, zipper)  (directions zipper)
+
+//
+// this must return one of then Directions given to it 
+// 
+and getInputKey (c, z) list =
+    let k = readKey ()
+
+    let ret key = 
+        if List.contains key list then key 
+        else 
+            beep ()
+            getInputKey (c, z) list // NOTE: Tail call 
+
+
+    match k with 
+    | System.ConsoleKey.DownArrow | System.ConsoleKey.X -> ret Down
+    | System.ConsoleKey.UpArrow | System.ConsoleKey.W -> ret Up
+    | System.ConsoleKey.LeftArrow | System.ConsoleKey.A-> ret Left
+    | System.ConsoleKey.RightArrow | System.ConsoleKey.D -> ret Right 
+    | System.ConsoleKey.H -> checkHint c z
+    | _ -> beep (); getInputKey (c, z) list
+
 let rec start () =
     clearConsole ()
     printfn "%s" welcome
@@ -286,9 +410,11 @@ and restart () =
 
 
 and game (zipper: Zipper<_>) = 
-    printInfo zipper 
+    printInfo zipper
 
-    let key = getInputKey $ directions zipper
+    let correct = findGold zipper
+
+    let key = checkHint correct zipper
 
     let result = goThere key zipper
 
