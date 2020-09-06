@@ -464,3 +464,69 @@ module MList =
           first.prev.next <- elt;
           first.prev <- elt
 
+// https://stackoverflow.com/questions/24264187/f-error-fs0695-this-recursive-binding-uses-an-invalid-mixture-of-recursive-for
+// type Parent = 
+//     { ParentName : string 
+//       Children : Child list }
+// and Child = 
+//     { ChildName : string 
+//       Parent : Parent }
+ 
+// let createChild parent childName = 
+//     { ChildName = childName
+//       Parent = parent }
+
+// let createParent parentName childNames = 
+//     let rec parent = 
+//         { ParentName = parentName
+//           Children = children }
+//     and children = 
+//         childNames
+//         |> List.map (createChild parent)
+//     parent
+ 
+type Parent = internal { children : Children option }
+and internal Children = { first : Child; rest : Children option }
+and Child = internal { parent : Parent }
+
+let rec internal listToChildren = function
+    | [] -> None
+    | c::cs -> Some { first = c; rest = listToChildren cs }
+
+let rec internal childrenToList = function
+    | None -> []
+    | Some { first = c; rest = cs } -> c :: childrenToList cs
+
+// 
+// Free monad : https://dev.to/shimmer/monads-for-free-in-f-30dl
+// 
+type Nest<'t> = 
+    | Free of Option<Nest<'t>>
+    | Pure of 't
+
+let rec bind f = function
+    | Free opt -> 
+        opt 
+        |> Option.map (bind f) 
+        |> Free
+    | Pure value -> f value
+
+type NestBuilder () = 
+    member x.Bind (nest, f) = bind f nest
+    member x.Return value = Pure value
+    member x.ReturnFrom nest = nest 
+
+let nest = NestBuilder ()
+
+let some value = 
+    value 
+    |> Pure 
+    |> Some
+    |> Free
+
+let ex = 
+    nest {
+        let! a = some "A"
+        let! b = some $ a + "B"
+        return! some $ b + "C"
+    }
