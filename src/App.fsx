@@ -491,7 +491,7 @@ and Child = internal { parent : Parent }
 
 let rec internal listToChildren = function
     | [] -> None
-    | c::cs -> Some { first = c; rest = listToChildren cs }
+    | c :: cs -> Some { first = c; rest = listToChildren cs }
 
 let rec internal childrenToList = function
     | None -> []
@@ -529,4 +529,75 @@ let ex =
         let! a = some "A"
         let! b = some $ a + "B"
         return! some $ b + "C"
+    }
+ 
+
+// https://dev.to/shimmer/why-algebraic-effects-matter-in-f-3m7g
+
+let hypotenuse a b =
+    printfn "Side a: %g" a
+    printfn "Side b: %g" b
+    let c = sqrt $ a*a + b*b
+    printfn "Side c: %g" c
+    c
+
+
+type Effect<'result> =
+    | Log of string * (unit -> Effect<'result>)
+    | Result of 'result
+
+
+let hypotenuse' a b =
+    Log ((sprintf "Side a: %g" a), fun () ->
+        Log ((sprintf "Side b: %g" b), fun () ->
+            let c = sqrt $ a*a + b*b
+            Log ((sprintf "Side c: %g" c), fun () ->
+                Result c)))
+
+// Just converting a let binding to a lambda
+let hypotenuse'' a b =
+    Log ((sprintf "Side a: %g" a), fun () ->
+        Log ((sprintf "Side b: %g" b), fun () ->
+                (fun c -> 
+                    Log ((sprintf "Side c: %g" c), 
+                        fun () -> Result c))(sqrt $ a*a + b*b)))
+
+let abbb = (fun () -> Result 10.)()
+let x c = 
+    Log ((sprintf "Side c: %g" c), fun () -> Result c)
+
+let handle effect = 
+    let rec loop k = function   
+        | Log (str, cont) -> 
+            loop (fun result -> k (str :: result)) (cont ())
+        | Result result ->
+            result, k []
+    loop id effect
+
+let c, log = 
+    hypotenuse' 10. 10.
+    |> handle
+
+let rec bind2 f = function 
+    | Log (str, cont) -> 
+        Log (str, fun () -> 
+                    cont () |> bind2 f)
+    | Result result ->  f result
+
+type EffectBuilder () = 
+    member x.Return value = Result value 
+    member x.Bind (effect, f) = bind2 f effect
+
+let effect = EffectBuilder ()
+
+let log' str = Log (str, fun () -> Result ())
+let logf fmt = Printf.ksprintf log' fmt
+
+let hypo a b =
+    effect {
+        do! logf "Side a: %g" a
+        do! logf "Side b: %g" b
+        let c = sqrt $ a*a + b*b
+        do! logf "Side c: %g" c
+        return c
     }
