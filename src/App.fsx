@@ -560,7 +560,7 @@ let hypotenuse'' a b =
         Log ((sprintf "Side b: %g" b), fun () ->
                 (fun c -> 
                     Log ((sprintf "Side c: %g" c), 
-                        fun () -> Result c))(sqrt $ a*a + b*b)))
+                            fun () -> Result c))(sqrt $ a*a + b*b)))
 
 let abbb = (fun () -> Result 10.)()
 let x c = 
