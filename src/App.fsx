@@ -635,4 +635,3 @@ let fmap f =
                 match xs with 
                 | [] -> []
                 | x :: xs -> f x :: force map xs
-    |> force
