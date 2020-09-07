@@ -579,9 +579,7 @@ let c, log =
     |> handle
 
 let rec bind2 f = function 
-    | Log (str, cont) -> 
-        Log (str, fun () -> 
-                    cont () |> bind2 f)
+    | Log (str, cont) -> Log (str, fun () -> cont () |> bind2 f)
     | Result result ->  f result
 
 type EffectBuilder () = 
@@ -601,3 +599,40 @@ let hypo a b =
         do! logf "Side c: %g" c
         return c
     }
+
+
+type Eventually<'a> =
+    | Done of 'a
+    | NotYetDone of (unit -> Eventually<'a>)
+
+
+let rec ebind f eventually = 
+    match eventually with 
+    | Done a -> f a
+    | NotYetDone g -> NotYetDone (fun () -> ebind f $ g ())
+
+let fix f = let rec x = lazy (f x) in x
+
+let fac = fix (fun f x -> if x = 0  then 1 else x * force f (x-1))
+
+let nums = fix (fun v -> seq { yield 0; yield! Seq.map ((+) 1) (force v) })
+
+let foldr f = 
+    fix $ fun fold i xs -> 
+              match xs with 
+              | [] -> i
+              | x :: xs -> f x (force fold i xs)
+
+let last () = 
+    fix $ fun f xs -> 
+            match xs with 
+            | [] -> None
+            | [a] -> Some a
+            | h :: t -> force f t
+
+let fmap f = 
+    fix $ fun map xs -> 
+                match xs with 
+                | [] -> []
+                | x :: xs -> f x :: force map xs
+    |> force
