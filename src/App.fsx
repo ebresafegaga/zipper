@@ -4,6 +4,9 @@
 // Just some random code 
 //
 
+// Original Rust compiler in OCaml 
+// https://github.com/rust-lang/rust/tree/ef75860a0a72f79f97216f8aaa5b388d98da6480/src/boot
+
 // 
 // Implementation inspired by: 
 // https://twitter.com/TartanLlama/status/1300721014532444160
