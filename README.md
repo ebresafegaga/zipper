@@ -3,7 +3,7 @@
 
 
 Inspired by these papers (Functional Pearls):
-  "The Zipper" by Gerald Heut, and 
+  "The Zipper" by Gérard Huet, and 
   "Weaving a Web" by Ralf Hinze and Johan Jeuring
   
  and implemented in F#.
